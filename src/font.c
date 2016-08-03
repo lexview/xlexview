@@ -1,5 +1,5 @@
 #include <stdlib.h>
-
+#include <unistd.h>
 #include <fcntl.h>
 
 #include <X11/Xlib.h>
@@ -38,8 +38,9 @@ int font_load(unsigned char id, unsigned char width, unsigned char height, char 
 		font[id].data=malloc(0x100*width*height*8);
 		read(fd, (void *)font[id].data, (size_t)0x100*width*height*8);
 		close(fd);
+		
+		return 1;
 	}
-
 	return 0;
 }
 

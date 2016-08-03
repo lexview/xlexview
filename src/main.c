@@ -1,11 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <X11/Xlib.h>
+#include <X11/keysym.h>
 
 #include "font.h"
 #include "list.h"
 #include "parse.h"
+
+#include "main.h"
 
 // Display
 
@@ -15,7 +19,10 @@ XEvent event;
 XSetWindowAttributes attributes; 
 XWindowAttributes window_attr;
 GC gc; 
-Visual *visual; 
+Visual *visual;
+#ifdef X11R4UP
+Atom wm_delete_window;
+#endif
 int screen;
 int depth;
 
@@ -33,7 +40,9 @@ int cur=0;
 int main(int argc, char *argv[])
 {
 	unsigned char quit=0;
+	char str[256];
 	int x,y;
+	int n;
 	
 	// Check parameter.
 	if (argc != 2) {
@@ -45,17 +54,15 @@ int main(int argc, char *argv[])
 	font_create();
 
 	// Load font.
-	font_load(0x30, 8, 19, "fonts/font0.fnt");
-	font_load(0x31, 8, 19, "fonts/font1.fnt");
-	font_load(0x32, 8, 19, "fonts/font2.fnt");
-	font_load(0x33, 8, 19, "fonts/font3.fnt");
-	font_load(0x34, 8, 19, "fonts/font4.fnt");
-	font_load(0x35, 8, 19, "fonts/font5.fnt");
-	font_load(0x36, 8, 19, "fonts/font6.fnt");
-	font_load(0x37, 8, 19, "fonts/font7.fnt");
-	font_load(0x38, 8, 19, "fonts/font8.fnt");
-	font_load(0x39, 8, 19, "fonts/font9.fnt");
-
+	for (n=0; n < 10; n++) {
+	    int rc;
+	    sprintf(str, FONT_PATH"/font%d.fnt", n);
+	    rc=font_load(0x30 + n, 8, 19, str);
+	    if (!rc) {
+		fprintf(stderr, "error load file %s\n", str);
+	    }
+	}
+	
 	// Load file.
 	list_create(&list_first);
 	list_load(&list_first, argv[1]);
@@ -63,31 +70,44 @@ int main(int argc, char *argv[])
 	// 
 	
 	display = XOpenDisplay(NULL);
+	if (display == NULL) {
+		fprintf(stderr, "error: can't open display.\n");
+		exit(1);
+	}
+
 	screen = DefaultScreen(display);
 	visual = DefaultVisual(display,screen);
 	depth  = DefaultDepth(display,screen); 
 
+	attributes.event_mask            = ExposureMask | StructureNotifyMask;
 	attributes.background_pixel      = white = XWhitePixel(display,screen); 
 	attributes.border_pixel          = black = XBlackPixel(display,screen); 
 	attributes.override_redirect     = 0; 
   
 	window= XCreateWindow(display, XRootWindow(display,screen),
-                   200,200, 300,200,5, depth, InputOutput, visual,
-                   CWBackPixel | CWBorderPixel | CWOverrideRedirect,
+                   200,200, 600,500,5, depth, InputOutput, visual,
+                   CWBackPixel | CWBorderPixel | CWBorderPixel, // CWOverrideRedirect,
 		   &attributes);
 
-	XSelectInput(display, window, ExposureMask | ButtonPressMask | KeyPressMask);
+	XSelectInput(display, window, ExposureMask | ButtonPressMask | KeyPressMask );
+
+	#ifdef X11R4UP
+	wm_delete_window=XInternAtom(display, "WM_DELETE_WINDOW", False);
+	XSetWMProtocols(display, window, &wm_delete_window, 1);
+	#endif
 
 	XMapWindow(display,window); 
 
 	gc = XCreateGC(display, window, 0, NULL);
   
-	do { 
+	while (!quit) {
+		XPending(display);
 		XNextEvent(display, &event); 
 		XGetWindowAttributes(display, window, &window_attr);
 		if (event.type == Expose) { 
-//			if (event.xexpose.count > 0)
-//				break;
+
+			if (event.xexpose.count > 0)
+				continue;
 
 			XSetForeground(display, gc, white);
 			XFillRectangle(display, window, gc, 0, 0, window_attr.width, window_attr.height);
@@ -97,8 +117,8 @@ int main(int argc, char *argv[])
 			list_current=list_first;
 			cur=cx=cy=0;
 			while ((list_current != NULL) && ( (cur-line)*19 < window_attr.height)) {
-				if (cur > line) {
-					parse(0 + cx, 0 + cy, list_current->value, strlen(list_current->value));
+				if (cur >= line) {
+					parse(cx, cy, list_current->value, strlen(list_current->value));
 					/*cx=0;*/ cy += 19;
 				}
 
@@ -117,25 +137,68 @@ int main(int argc, char *argv[])
 						line--;
 
 					event.type=Expose;
-//					event.xexpose.count=1;
+					event.xexpose.count=0;
 					XSendEvent(display, window, True, ExposureMask, &event);
 					break;
 				case Button5:
 					XDrawPoint(display, window, gc, x, y);
-						if (1)
-							line++;
+					if (1)
+						line++;
 
 					event.type=Expose;
-//					event.xexpose.count=1;
+					event.xexpose.count=0;
 					XSendEvent(display, window, True, ExposureMask, &event);
 					break;
 			}
 		} else
 		if (event.type == KeyPress) {
-			quit=1;
+			KeySym ks;
+
+			ks = XLookupKeysym(&event.xkey, 0);
+
+//			ks = XKeycodeToKeysym(display, ((XKeyEvent *)&event)->keycode, 1);
+
+			if (ks == XK_Home) {
+				line=0;
+
+				event.type=Expose;
+				event.xexpose.count=1;
+				XSendEvent(display, window, True, ExposureMask, &event);
+			} else
+			if (ks == XK_Up) {
+				if (line > 0)
+					line--;
+
+				event.type=Expose;
+				event.xexpose.count=1;
+				XSendEvent(display, window, True, ExposureMask, &event);
+			} else
+			if (ks == XK_Down) {
+				line++;
+
+				event.type=Expose;
+				event.xexpose.count=1;
+				XSendEvent(display, window, True, ExposureMask, &event);
+			} else
+			if (ks == XK_End) {
+				line=list_count(&list_first);
+				
+				event.type=Expose;
+				event.xexpose.count=1;
+				XSendEvent(display, window, True, ExposureMask, &event);
+			} else
+			if (ks == XK_Escape)
+				quit=1;
 		}
-	} while (!quit); 
-  
+#ifdef X11R4UP
+		else
+		if (event.type == ClientMessage) {
+			if (event.xclient.data.l[0] == wm_delete_window)
+				quit = 1;
+		}
+#endif
+	}
+
 	XCloseDisplay(display); 
 
 	// Unload file.

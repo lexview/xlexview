@@ -1,8 +1,6 @@
 # xlexview
 
-X11 Lexicon Viewer
+Hi. Lexicon Viewer for X11 Windows System is OpenSource programm.
+You can start xlexview on X11 pure system.
 
-Hi ;)
-
-Lexicon Viewer for X11 system. It's soft using pure 
-X11 and no need other library ;)
+Thanx.

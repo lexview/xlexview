@@ -1,4 +1,8 @@
-// Framebuffer use shadow memory for fast display refresh and disable flashing with frame changing.
-// (need more memory)
+// Set font path
 //
-//#define FRAMEBUFFER
+#ifndef DATADIR
+//#define FONT_PATH "/usr/X11R6/share/xlexview/fonts"
+#define FONT_PATH "/usr/local/share/xlexview/fonts"
+#else
+#define FONT_PATH DATADIR"/fonts"
+#endif

@@ -4,20 +4,18 @@
 
 #include "parse.h"
 
-
-int parse(int x, int y, unsigned char *str, int len)
+int parse(int x, int y, char *str, int len)
 {
 	int underline=0;
 	int command=0;
 	unsigned char font=0;
 	unsigned char ch;
 	int pos;
-	int spos = 0;
 	int cx=0, cy=0;
 
 	for(pos=0; pos < len; pos++) {
 		if ( command ) {
-			ch=*(str+pos);
+			ch=(unsigned char)*(str+pos);
 			switch (ch)
 			{
 				case 0x2E:

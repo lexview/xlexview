@@ -1,1 +1,1 @@
-int parse(int x, int y, unsigned char *str, int len);
+int parse(int x, int y, char *str, int len);

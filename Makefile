@@ -1,28 +1,18 @@
 CC=gcc
-CFLAGS=-O3 -Wall -I /usr/local/include -I /usr/X11R6/include
-LFLAGS=-L /usr/X11R6/lib -lX11
+CFLAGS=-Wall -g -O2
+CFLAGS+=-I/usr/local/include -DX11R4UP
+LFLAGS=-L/usr/local/lib -lX11
+INSTALL=install
 
+OBJS=src/main.o src/font.o src/list.o src/parse.o
 
-xlv: src/main.o src/font.o src/list.o src/parse.o
-	$(CC) -o xlv src/main.o src/font.o src/list.o src/parse.o $(LFLAGS)
+all: xlexview
 
+xlexview: $(OBJS)
+	$(CC) $(LFLAGS) -o $@ $(OBJS)
 
-main.o: main.c
-	$(CC) -c main.c $(CFLAGS)
-
-font.o: font.c
-	$(CC) -c font.c $(CFLAGS)
-
-list.o: list.c
-	$(CC) -c list.c $(CFLAGS)
-
-parse.o: parse.c
-	$(CC) -c parse.c $(CFLAGS)
-
-
-install:
-	echo "Not implemented yet!"
-
+%.o : %.c Makefile
+	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -f *.o *~ xlv
+	rm -f *.o xlexview
