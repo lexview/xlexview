@@ -1,8 +1,10 @@
-// Set font path
-//
+#ifndef MAIN_H__
+#define MAIN_H__
+
 #ifndef DATADIR
-//#define FONT_PATH "/usr/X11R6/share/xlexview/fonts"
-#define FONT_PATH "/usr/local/share/xlexview/fonts"
-#else
-#define FONT_PATH DATADIR"/fonts"
+# define DATADIR "/usr/local/share/xlv"
 #endif
+
+# define FONT_PATH DATADIR"/fonts"
+
+#endif /* MAIN_H__ */
